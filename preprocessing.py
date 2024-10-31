@@ -4,6 +4,18 @@ from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 train_df = pd.read_csv("child-mind-institute-problematic-internet-use/train.csv")
+test_df = pd.read_csv("child-mind-institute-problematic-internet-use/test.csv")
+SEASON_COLS = [
+    "Basic_Demos-Enroll_Season", 
+    "CGAS-Season", 
+    "Physical-Season", 
+    "Fitness_Endurance-Season", 
+    "FGC-Season", 
+    "BIA-Season", 
+    "PAQ_A-Season", 
+    "PAQ_C-Season", 
+    "SDS-Season",
+    "PreInt_EduHx-Season"]
 TARGET_COLS = [
     "PCIAT-Season",
     "PCIAT-PCIAT_01",
@@ -26,41 +38,25 @@ TARGET_COLS = [
     "PCIAT-PCIAT_18",
     "PCIAT-PCIAT_19",
     "PCIAT-PCIAT_20",
-    "PCIAT-PCIAT_Total",
-]
-ADD_COLS = [   
-    "id",
-    "Basic_Demos-Enroll_Season", 
-    "CGAS-Season", 
-    "Physical-Season", 
-    "Fitness_Endurance-Season", 
-    "FGC-Season", 
-    "BIA-Season", 
-    "PAQ_A-Season", 
-    "PAQ_C-Season", 
-    "SDS-Season",
-    "PreInt_EduHx-Season"
+    "PCIAT-PCIAT_Total"
 ]
 train_df = train_df.drop(TARGET_COLS,axis=1)
-train_df = train_df.drop(ADD_COLS,axis=1)
-train_df = train_df.dropna(subset=['sii'])
+for col in test_df.columns:
+    if col not in train_df.columns:
+        test_df.drop(columns=col, inplace=True)
+#train_df = train_df.dropna(subset=['sii'])
 
-X_train = train_df.drop(columns=['sii'])  # 假設 'category' 是標籤欄位
-y_train = train_df['sii']
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.3, random_state=42)
+season_mapping = {'Spring': 0, 'Summer': 1, 'Fall': 2, 'Winter': 3}
+for col in SEASON_COLS:
+    train_df[col] = train_df[col].map(season_mapping)
+    test_df[col] = test_df[col].map(season_mapping)
+
+id_train = train_df['id']
+id_test = test_df['id']
+train_df.drop(columns=['id'], inplace=True)
+test_df.drop(columns=['id'], inplace=True)
 
 imputer = SimpleImputer(strategy='median')
-X_train = pd.DataFrame(imputer.fit_transform(X_train), columns=X_train.columns)
-X_val = pd.DataFrame(imputer.fit_transform(X_val), columns=X_val.columns)
-
-model = RandomForestClassifier(random_state=42)
-model.fit(X_train, y_train)
-
-y_val_pred = model.predict(X_val)
-
-accuracy = accuracy_score(y_val, y_val_pred)
-print(f"Validation Accuracy: {accuracy:.4f}")
-print("Confusion Matrix:")
-print(confusion_matrix(y_val, y_val_pred))
-print("\nClassification Report:")
-print(classification_report(y_val, y_val_pred))
+X_train = pd.DataFrame(imputer.fit_transform(train_df), columns=train_df.columns)
+X_test = pd.DataFrame(imputer.fit_transform(test_df), columns=test_df.columns)
+X_train['sii'] = X_train['sii'].round().astype(int)
